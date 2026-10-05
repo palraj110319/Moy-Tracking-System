@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MoyFilter, MoyTransaction, MoyTransactionInput, PaymentMode, TransactionType } from '../types/domain';
-import { createMoyTransaction, deleteMoyTransaction, getMoyPlaces, searchMoyTransactions, updateMoyTransaction } from '../api/moyApi';
+import { createMoyTransaction, deleteMoyTransaction, getMoyPeople, getMoyPlaces, searchMoyTransactions, updateMoyTransaction } from '../api/moyApi';
 import { exportTransactionsExcel } from '../api/dataApi';
+import { emailTransactionsExcel } from '../api/emailApi';
 import { todayIso } from '../utils/format';
 import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
 import { Modal } from '../components/Modal';
 import { ExcelImportModal } from '../components/ExcelImportModal';
 import { ExcelIcon } from '../components/ExcelIcon';
+import { EmailIcon } from '../components/EmailIcon';
+import { EmailExportModal } from '../components/EmailExportModal';
+import { PersonCombobox } from '../components/PersonCombobox';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CurrencyDisplay } from '../components/CurrencyDisplay';
 import { useToast } from '../components/Toast';
@@ -32,6 +36,7 @@ export function MoyTransactions() {
   const [toDelete, setToDelete] = useState<MoyTransaction | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const { notify } = useToast();
 
   // Existing Place values, used purely as autocomplete suggestions in the
@@ -59,6 +64,15 @@ export function MoyTransactions() {
     });
   };
   useEffect(loadPlaceOptions, []);
+
+  // Existing people feed the searchable Person Name dropdown in the form.
+  const [personOptions, setPersonOptions] = useState<string[]>([]);
+  const loadPersonOptions = () => {
+    getMoyPeople().then(setPersonOptions).catch(() => {
+      // Dropdown suggestions are a convenience only — typing a name still works.
+    });
+  };
+  useEffect(loadPersonOptions, []);
 
   const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM, transactionDate: todayIso() }); setFormError(null); setShowForm(true); };
   const openEdit = (t: MoyTransaction) => {
@@ -91,6 +105,7 @@ export function MoyTransactions() {
       setShowForm(false);
       load();
       loadPlaceOptions();
+      loadPersonOptions();
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Save failed — please check the details and try again', 'error');
     }
@@ -124,12 +139,21 @@ export function MoyTransactions() {
     }
   };
 
+  /** Emails the latest export (current filter) to the given address; throws a user-safe message on failure. */
+  const sendEmail = async (to: string) => {
+    const count = await emailTransactionsExcel(to, filter);
+    notify(`Email sent to ${to} with ${count} transaction(s) attached`);
+  };
+
   return (
     <div>
       <div className="page-header">
         <h2>Moy Transactions</h2>
         <div className="header-actions">
           <button className="btn btn-primary" onClick={openCreate}>Add Transaction</button>
+          <button className="btn btn-secondary btn-icon" onClick={() => setShowEmail(true)}>
+            <EmailIcon /> Email
+          </button>
           <button className="btn btn-secondary btn-icon" onClick={() => setShowImport(true)}>
             <ExcelIcon /> Import Excel
           </button>
@@ -182,10 +206,12 @@ export function MoyTransactions() {
       {showForm && (
         <Modal title={editing ? 'Edit Moy Transaction' : 'Add Moy Transaction'} onClose={() => setShowForm(false)}>
           <form onSubmit={submit} className="form-grid">
-            <label>
-              Person Name
-              <input required maxLength={150} value={form.personName} onChange={(e) => setForm({ ...form, personName: e.target.value })} placeholder="Type a person's name" />
-            </label>
+            <PersonCombobox
+              value={form.personName}
+              options={personOptions}
+              maxLength={150}
+              onChange={(personName) => setForm({ ...form, personName })}
+            />
             <label>
               Transaction Type
               <select value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value as TransactionType })}>
@@ -226,9 +252,11 @@ export function MoyTransactions() {
       {showImport && (
         <ExcelImportModal
           onClose={() => setShowImport(false)}
-          onImported={() => { load(); loadPlaceOptions(); }}
+          onImported={() => { load(); loadPlaceOptions(); loadPersonOptions(); }}
         />
       )}
+
+      {showEmail && <EmailExportModal onClose={() => setShowEmail(false)} onSend={sendEmail} />}
 
       {toDelete && (
         <ConfirmDialog

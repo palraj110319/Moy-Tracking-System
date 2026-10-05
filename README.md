@@ -44,8 +44,20 @@ Your data is not in this repository and is never uploaded anywhere.
 Data is stored per browser. Clearing site data, using a private window, or switching device loses it.
 Use **Settings → Download backup** regularly; **Restore from backup** brings it back.
 
+## Email export (Email button)
+
+The **Email** button on Moy Transactions exports the latest transactions (respecting the current filters) to Excel
+in the browser and posts the file to a small Vercel serverless function, `api/send-email.ts`, which sends it
+through your SMTP account with nodemailer. SMTP credentials live only in server environment variables
+(see `.env.example`); they are never in the browser bundle.
+
+- Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (and optionally `SMTP_SECURE`, `EMAIL_FROM`,
+  `EMAIL_ALLOWED_RECIPIENTS`) in Vercel → Settings → Environment Variables, then redeploy.
+- Locally, copy `.env.example` to `.env` and run `npx vercel dev` (plain `npm run dev` does not serve `/api`).
+- Set `EMAIL_ALLOWED_RECIPIENTS` — the endpoint is otherwise able to email any address from your account.
+
 ## Deploy to Vercel
 
 Push to GitHub, then in Vercel: **Add New → Project → import the repo**. Vercel detects Vite; the included
 `vercel.json` sets the build command, `dist` output, and the SPA rewrite so page refreshes work.
-No environment variables are needed.
+Environment variables are only needed for the Email feature (see above).

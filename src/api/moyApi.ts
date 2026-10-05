@@ -5,7 +5,7 @@ import { validateTransactionInput } from '../local-backend/validation';
 export type { MoyFilter, MoyTransactionInput };
 
 export async function createMoyTransaction(input: MoyTransactionInput): Promise<MoyTransaction> {
-  return backend.createTransaction(input);
+  return backend.createTransaction({ ...input, personName: backend.resolvePersonName(input.personName ?? '') });
 }
 
 export interface BulkResult {
@@ -45,7 +45,7 @@ export async function createMoyTransactionsBulk(inputs: MoyTransactionInput[]): 
 }
 
 export async function updateMoyTransaction(id: number, input: MoyTransactionInput): Promise<MoyTransaction> {
-  return backend.updateTransaction(id, input);
+  return backend.updateTransaction(id, { ...input, personName: backend.resolvePersonName(input.personName ?? '') });
 }
 
 export async function deleteMoyTransaction(id: number): Promise<void> {
@@ -67,4 +67,9 @@ export async function searchMoyTransactions(filter: MoyFilter): Promise<Page<Moy
 /** Distinct Place values already used — powers the Place autocomplete suggestions. */
 export async function getMoyPlaces(): Promise<string[]> {
   return backend.getDistinctPlaces();
+}
+
+/** Distinct person names already recorded — powers the searchable Person Name dropdown. */
+export async function getMoyPeople(): Promise<string[]> {
+  return backend.getDistinctPeople();
 }

@@ -327,3 +327,18 @@ input, select, textarea { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition: none; }
 }
+
+/* --- Person combobox & email dialog --- */
+.form-grid .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--color-muted); min-width: 0; }
+.combobox { position: relative; }
+.combobox-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+  margin: 0; padding: 4px; list-style: none; background: white;
+  border: 1px solid var(--color-border); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12); max-height: 220px; overflow-y: auto;
+}
+.combobox-option { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--color-text); }
+.combobox-option.active { background: #edf2f7; }
+.combobox-option.new { color: var(--color-primary); font-weight: 600; }
+.combobox-hint { font-size: 12px; color: var(--color-muted); }
+.email-note { margin: 0; font-size: 13px; color: var(--color-muted); }

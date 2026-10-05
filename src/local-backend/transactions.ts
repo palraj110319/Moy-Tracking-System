@@ -4,6 +4,7 @@ import type {
 import { fromPaise, toPaise } from './money';
 import { readStore, writeStore, type StoredTransaction } from './storage';
 import { validateTransactionInput } from './validation';
+import { cleanPersonName, personKey } from '../utils/person';
 
 export const DEFAULT_PAGE_SIZE = 20;
 
@@ -158,4 +159,24 @@ export function getDistinctPlaces(): string[] {
   const places = new Set<string>();
   for (const t of listActive()) if (t.place) places.add(t.place);
   return Array.from(places).sort((a, b) => a.localeCompare(b));
+}
+
+/** Distinct person names already on record (exact spelling), sorted — feeds the Person Name combobox. */
+export function getDistinctPeople(): string[] {
+  const people = new Set<string>();
+  for (const t of listActive()) if (t.personName) people.add(t.personName);
+  return Array.from(people).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Duplicate guard: if the name matches an existing person (ignoring case and
+ * extra spaces), return the existing spelling so the transaction attaches to
+ * that person instead of creating a near-duplicate. Otherwise return the cleaned name.
+ */
+export function resolvePersonName(input: string): string {
+  const cleaned = cleanPersonName(input);
+  if (!cleaned) return cleaned;
+  const people = getDistinctPeople();
+  const key = personKey(cleaned);
+  return people.find((p) => p === cleaned) ?? people.find((p) => personKey(p) === key) ?? cleaned;
 }

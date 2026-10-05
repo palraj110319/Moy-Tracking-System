@@ -13,8 +13,7 @@ const TRANSACTION_HEADERS = ['Person Name', 'Type', 'Amount', 'Payment Mode', 'P
  * Columns match what Import Excel accepts, so an exported file can be
  * re-imported unchanged.
  */
-export async function exportTransactionsToExcel(rows: MoyTransaction[]): Promise<void> {
-  const XLSX = await loadXlsx();
+function buildTransactionsWorkbook(XLSX: typeof import('xlsx'), rows: MoyTransaction[]) {
   const sheetRows = rows.map((t) => ({
     'Person Name': t.personName,
     Type: t.transactionType,
@@ -26,7 +25,23 @@ export async function exportTransactionsToExcel(rows: MoyTransaction[]): Promise
   const worksheet = XLSX.utils.json_to_sheet(sheetRows, { header: TRANSACTION_HEADERS });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Moy Transactions');
-  XLSX.writeFile(workbook, `moy-transactions-${todayIso()}.xlsx`);
+  return workbook;
+}
+
+const transactionsFileName = () => `moy-transactions-${todayIso()}.xlsx`;
+
+export async function exportTransactionsToExcel(rows: MoyTransaction[]): Promise<void> {
+  const XLSX = await loadXlsx();
+  XLSX.writeFile(buildTransactionsWorkbook(XLSX, rows), transactionsFileName());
+}
+
+/** Same workbook as the Excel export, returned as base64 so it can be attached to an email. */
+export async function buildTransactionsExcelAttachment(
+  rows: MoyTransaction[]
+): Promise<{ filename: string; contentBase64: string }> {
+  const XLSX = await loadXlsx();
+  const contentBase64: string = XLSX.write(buildTransactionsWorkbook(XLSX, rows), { type: 'base64', bookType: 'xlsx' });
+  return { filename: transactionsFileName(), contentBase64 };
 }
 
 const REPORT_HEADERS = ['Person', 'Given', 'Received', 'Difference'];
