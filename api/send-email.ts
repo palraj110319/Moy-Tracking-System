@@ -109,8 +109,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pass = process.env.SMTP_PASS;
   const from = process.env.EMAIL_FROM || user;
   if (!host || !user || !pass || !from) {
-    console.error('send-email: SMTP_HOST, SMTP_USER, SMTP_PASS and EMAIL_FROM/SMTP_USER must be set');
-    return fail(res, 503, 'Email is not configured on the server. Ask the administrator to set the SMTP environment variables.');
+    // Names only, never values — safe to show and makes misconfiguration easy to diagnose.
+    const missing = [
+      !host && 'SMTP_HOST',
+      !user && 'SMTP_USER',
+      !pass && 'SMTP_PASS',
+      !from && 'EMAIL_FROM (or SMTP_USER)',
+    ].filter(Boolean).join(', ');
+    console.error(`send-email: missing environment variables: ${missing}`);
+    return fail(res, 503, `Email is not configured on the server. Missing: ${missing}. Add them in Vercel (Settings → Environment Variables) and redeploy.`);
   }
   const port = Number(process.env.SMTP_PORT) || 587;
   const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465;
